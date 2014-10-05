@@ -1,82 +1,46 @@
-/*global Ghost, _, Backbone, JSON */
-(function () {
-    'use strict';
+import ValidationEngine from 'ghost/mixins/validation-engine';
+import NProgressSaveMixin from 'ghost/mixins/nprogress-save';
 
-    Ghost.Models.Post = Ghost.ProgressModel.extend({
+var Post = DS.Model.extend(NProgressSaveMixin, ValidationEngine, {
+    validationType: 'post',
 
-        defaults: {
-            status: 'draft'
-        },
+    uuid: DS.attr('string'),
+    title: DS.attr('string', {defaultValue: ''}),
+    slug: DS.attr('string'),
+    markdown: DS.attr('string', {defaultValue: ''}),
+    html: DS.attr('string'),
+    image: DS.attr('string'),
+    featured: DS.attr('boolean', {defaultValue: false}),
+    page: DS.attr('boolean', {defaultValue: false}),
+    status: DS.attr('string', {defaultValue: 'draft'}),
+    language: DS.attr('string', {defaultValue: 'en_US'}),
+    meta_title: DS.attr('string'),
+    meta_description: DS.attr('string'),
+    author: DS.belongsTo('user',  { async: true }),
+    author_id: DS.attr('number'),
+    updated_at: DS.attr('moment-date'),
+    published_at: DS.attr('moment-date'),
+    published_by: DS.belongsTo('user', { async: true }),
+    tags: DS.hasMany('tag', { embedded: 'always' }),
+    //## Computed post properties
+    isPublished: Ember.computed.equal('status', 'published'),
+    isDraft: Ember.computed.equal('status', 'draft'),
 
-        blacklist: ['published', 'draft'],
+    // remove client-generated tags, which have `id: null`.
+    // Ember Data won't recognize/update them automatically
+    // when returned from the server with ids.
+    updateTags: function () {
+        var tags = this.get('tags'),
+        oldTags = tags.filterBy('id', null);
 
-        parse: function (resp) {
+        tags.removeObjects(oldTags);
+        oldTags.invoke('deleteRecord');
+    },
 
-            if (resp.posts) {
-                resp = resp.posts[0];
-            }
-            if (resp.status) {
-                resp.published = resp.status === 'published';
-                resp.draft = resp.status === 'draft';
-            }
-            if (resp.tags) {
-                return resp;
-            }
-            return resp;
-        },
+    isAuthoredByUser: function (user) {
+        return parseInt(user.get('id'), 10) === parseInt(this.get('author_id'), 10);
+    }
 
-        validate: function (attrs) {
-            if (_.isEmpty(attrs.title)) {
-                return 'You must specify a title for the post.';
-            }
-        },
+});
 
-        addTag: function (tagToAdd) {
-            var tags = this.get('tags') || [];
-            tags.push(tagToAdd);
-            this.set('tags', tags);
-        },
-
-        removeTag: function (tagToRemove) {
-            var tags = this.get('tags') || [];
-            tags = _.reject(tags, function (tag) {
-                return tag.id === tagToRemove.id || tag.name === tagToRemove.name;
-            });
-            this.set('tags', tags);
-        },
-        sync: function (method, model, options) {
-            //wrap post in {posts: [{...}]}
-            if (method === 'create' || method === 'update') {
-                options.data = JSON.stringify({posts: [this.attributes]});
-                options.contentType = 'application/json';
-            }
-
-            return Backbone.Model.prototype.sync.apply(this, arguments);
-        }
-    });
-
-    Ghost.Collections.Posts = Backbone.Collection.extend({
-        currentPage: 1,
-        totalPages: 0,
-        totalPosts: 0,
-        nextPage: 0,
-        prevPage: 0,
-
-        url: Ghost.paths.apiRoot + '/posts/',
-        model: Ghost.Models.Post,
-
-        parse: function (resp) {
-            if (_.isArray(resp.posts)) {
-                this.limit = resp.meta.pagination.limit;
-                this.currentPage = resp.meta.pagination.page;
-                this.totalPages = resp.meta.pagination.pages;
-                this.totalPosts = resp.meta.pagination.total;
-                this.nextPage = resp.meta.pagination.next;
-                this.prevPage = resp.meta.pagination.prev;
-                return resp.posts;
-            }
-            return resp;
-        }
-    });
-
-}());
+export default Post;

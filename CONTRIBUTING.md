@@ -158,19 +158,22 @@ repository to allow you to checkout pull requests in the same way as branches:
 <a name="documentation"></a>
 ### Documentation
 
-Ghost's main documentation can be found at [docs.ghost.org](http://docs.ghost.org).
+Ghost's user documentation can be found at [support.ghost.org](http://support.ghost.org), if you're interested in submitting user documentation, please let us know by [emailing support](mailto:support@ghost.org).
 
-The documentation is generated using jekyll, all of the docs are on the gh-pages branch on the GitHub repository.
-You can clone the repo, checkout the gh-pages branch, and submit pull requests following
-the [pull-request](#pull-requests) guidelines.
+Ghost's developer documentation can be found at [docs.ghost.org](http://docs.ghost.org).
 
+This documentation is written in markdown and generated using jekyll via GitHub pages, meaning the documentation can be found on the  [gh-pages branch](https://github.com/TryGhost/Ghost/tree/gh-pages) of the GitHub repository.
+
+For small changes, it is possible to edit the files directly and submit a PR through GitHub. For larger changes, you can clone the gh-pages branch using the command:
+
+`git clone -b gh-pages git@github.com:TryGhost/Ghost.git`
+
+Please follow the [pull-request](#pull-requests) guidelines for submitting PRs.
 
 <a name="translation"></a>
 ### Translation
 
 Full documentation on contributing translations can be found at <http://docs.ghost.org/translations>
-
-
 
 <a name="core"></a>
 ## Working on Ghost Core
@@ -228,7 +231,7 @@ or more of the following:
 - **[master](https://github.com/TryGhost/Ghost)** is the bleeding edge development branch. All work on the next
 release is here. Do **NOT** use this branch for a production site.
 - **[stable](https://github.com/TryGhost/Ghost/tree/stable)** contains the latest release of Ghost. This branch may be used in production.
-- **[gh-pages](http://github.com/TryGhost/Ghost/tree/gh-pages)** contains [The Ghost Guide](http://docs.ghost.org) documentation for Getting Started with Ghost.
+- **[gh-pages](http://github.com/TryGhost/Ghost/tree/gh-pages)** contains [The Ghost Guide](http://docs.ghost.org) our developer documentation.
 
 
 ## Grunt Toolkit

@@ -1,8 +1,8 @@
 
 var path = require('path'),
     _    = require('lodash'),
-    when = require('when'),
-    appProxy = require('./proxy'),
+    Promise = require('bluebird'),
+    AppProxy = require('./proxy'),
     config = require('../config'),
     AppSandbox = require('./sandbox'),
     AppDependencies = require('./dependencies'),
@@ -11,7 +11,7 @@ var path = require('path'),
 
 // Get the full path to an app by name
 function getAppAbsolutePath(name) {
-    return path.join(config().paths.appPath, name);
+    return path.join(config.paths.appPath, name);
 }
 
 // Get a relative path to the given apps root, defaults
@@ -29,9 +29,13 @@ function loadApp(appPath) {
     return sandbox.loadApp(appPath);
 }
 
-function getAppByName(name) {
+function getAppByName(name, permissions) {
     // Grab the app class to instantiate
     var AppClass = loadApp(getAppRelativePath(name)),
+        appProxy = new AppProxy({
+            name: name,
+            permissions: permissions
+        }),
         app;
 
     // Check for an actual class, otherwise just use whatever was returned
@@ -41,7 +45,10 @@ function getAppByName(name) {
         app = AppClass;
     }
 
-    return app;
+    return {
+        app: app,
+        proxy: appProxy
+    };
 }
 
 // The loader is responsible for loading apps
@@ -57,25 +64,25 @@ loader = {
                 // Load app permissions
                 var perms = new AppPermissions(appPath);
 
-                return perms.read().otherwise(function (err) {
+                return perms.read().catch(function (err) {
                     // Provide a helpful error about which app
-                    return when.reject(new Error("Error loading app named " + name + "; problem reading permissions: " + err.message));
+                    return Promise.reject(new Error('Error loading app named ' + name + '; problem reading permissions: ' + err.message));
                 });
             })
             .then(function (appPerms) {
-                var app = getAppByName(name, appPerms);
+                var appInfo = getAppByName(name, appPerms),
+                    app = appInfo.app,
+                    appProxy = appInfo.proxy;
 
                 // Check for an install() method on the app.
                 if (!_.isFunction(app.install)) {
-                    return when.reject(new Error("Error loading app named " + name + "; no install() method defined."));
+                    return Promise.reject(new Error('Error loading app named ' + name + '; no install() method defined.'));
                 }
 
                 // Run the app.install() method
                 // Wrapping the install() with a when because it's possible
                 // to not return a promise from it.
-                return when(app.install(appProxy)).then(function () {
-                    return when.resolve(app);
-                });
+                return Promise.resolve(app.install(appProxy)).return(app);
             });
     },
 
@@ -84,18 +91,18 @@ loader = {
         var perms = new AppPermissions(getAppAbsolutePath(name));
 
         return perms.read().then(function (appPerms) {
-            var app = getAppByName(name, appPerms);
+            var appInfo = getAppByName(name, appPerms),
+                app = appInfo.app,
+                appProxy = appInfo.proxy;
 
             // Check for an activate() method on the app.
             if (!_.isFunction(app.activate)) {
-                return when.reject(new Error("Error loading app named " + name + "; no activate() method defined."));
+                return Promise.reject(new Error('Error loading app named ' + name + '; no activate() method defined.'));
             }
 
             // Wrapping the activate() with a when because it's possible
             // to not return a promise from it.
-            return when(app.activate(appProxy)).then(function () {
-                return when.resolve(app);
-            });
+            return Promise.resolve(app.activate(appProxy)).return(app);
         });
     }
 };
